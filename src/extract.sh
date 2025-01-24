@@ -134,6 +134,7 @@ getPayload() {
 	# parse tshark output to get rid of unnecessary bytes in front of payloads
 	for i in *; do
 		python3 $directory/src/tshark_OutputParser.py $i $messageType $payloadType
+		rm *
 	done
 	mv *_payload.csv $directory/data/payloadOutput
 }
