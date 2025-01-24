@@ -4,7 +4,8 @@ import J2735_201603_2023_06_22
 import sys
 import csv
 import numpy
-import datetime
+from datetime import datetime, timedelta, timezone
+
 
 def extract_values(obj, key):
     """Pull all values of specified key from nested JSON."""
@@ -47,15 +48,18 @@ def convID(id, length):
     return id
 
 def writeSpatHeader():
-    columnHeaderString="packetTimestamp,intersectionID"
-    columnHeaderString = columnHeaderString + ",phase" + ",state" + ",countdown\n"
+    columnHeaderString="packetTimestamp,intersectionID,moy,milliseconds,timestamp,unixTime,timeDiff\n"
     fout.write(columnHeaderString)
 
 def writeMessageHeader(msgType):
     if (msgType == "BSM") :
-        fout.write("packetTimestamp,bsm_id,secMark,latency,latitude,longitude,speed(m/s),heading,elevation(m),accel_long(m/s^2)\n")
+        fout.write("packetTimestamp,bsmId,secMark,timestamp,formattedTimestamp,timediff\n")
     elif (msgType=="MAP"):
         fout.write("packetTimestamp,intersectionID,latitude,longitude,laneWidth,signalGroupID\n")
+    elif (msgType=="TIM"):
+        fout.write("packetTimestamp,msgCnt,timeStamp,startTime,durationTime\n")
+    elif (msgType=="PSM"):
+        fout.write("packetTimestamp,msgCnt,secMark\n")
     elif (msgType=="SDSM"):
         fout.write("packetTimestamp,msgCnt,sourceId,lat,long,heading\n")
     elif (msgType=="Mobility Request"):
@@ -107,24 +111,27 @@ for dt in list1:
         # SPAT
         if (msgid == "0013"):
             intersectionID = msg()['value'][1]['intersections'][0]['id']['id']
-            instersectionPhaseArray = msg()['value'][1]['intersections'][0]['states']
-            
-            # used later when exact number or phases is known
-            numPhases = 2 # use number of desired phases
-            spatPhaseArray = [None] * numPhases
+            moy = msg()['value'][1]['intersections'][0]['moy']
+            millisec = msg()['value'][1]['intersections'][0]['timeStamp']
 
-            for phase in range(len(instersectionPhaseArray)):
-                currentPhase = msg()['value'][1]['intersections'][0]['states'][phase].get('signalGroup')
-                currentState = str(msg()['value'][1]['intersections'][0]['states'][phase]['state-time-speed'][0]['eventState'])
-                minEndTime = msg()['value'][1]['intersections'][0]['states'][phase]['state-time-speed'][0]['timing']['minEndTime']
-                maxEndTime = msg()['value'][1]['intersections'][0]['states'][phase]['state-time-speed'][0]['timing']['maxEndTime']
-                if (minEndTime == 36001):
-                    timeEndSec = maxEndTime/6
-                else:
-                    timeEndSec = minEndTime/6
+            # Packet year
+            packet_datetime = datetime.fromtimestamp(float(dt[0]), tz=timezone.utc)
+            year_from_packet = packet_datetime.year
 
-                spatString = str(dt[0]) + "," + str(intersectionID) + "," + str(currentPhase) + "," + str(currentState) + "," + str(timeEndSec) + "\n"
-                fout.write(spatString)
+            # Calculate the base datetime for the year
+            baseDatetime = datetime(year_from_packet, 1, 1, tzinfo=timezone.utc)
+
+            # Add the minutes and milliseconds to the base datetime
+            timeStamp = baseDatetime + timedelta(minutes=moy, milliseconds=millisec)
+
+            # Convert the timestamp to Unix time with fractional seconds
+            unixTimestamp = timeStamp.timestamp()
+            formattedTimestamp = f"{unixTimestamp:.5f}"
+
+            timeDiff = float(dt[0]) - unixTimestamp
+
+            spatString = str(dt[0]) + "," + str(intersectionID) + "," + str(moy) + "," + str(millisec) + "," + str(timeStamp) + "," + str(formattedTimestamp) + "," + str(timeDiff) + "\n"
+            fout.write(spatString)
 
         # MAP
         elif (msgid == "0012"):
@@ -140,28 +147,79 @@ for dt in list1:
         # BSM
         elif (msgid == "0014"):
             bsmId = msg()['value'][1]['coreData']['id'].hex()
-            lat= msg()['value'][1]['coreData']['lat']
-            longstr = msg()['value'][1]['coreData']['long']
-            speed = msg()['value'][1]['coreData']['speed']
-            elevation = msg()['value'][1]['coreData']['elev']
             secMark = msg()['value'][1]['coreData']['secMark']
-            heading = msg()['value'][1]['coreData']['heading']
-            speed_converted = speed*0.02 #m/s
-            accel_long = msg()['value'][1]['coreData']['accelSet']['long']
-            accel_long_converted = accel_long*0.01 #m^s^2
-            
-            packet_timestamp = datetime.datetime.fromtimestamp(int(float(dt[0])))
-            roundDownMinTime = datetime.datetime(packet_timestamp.year,packet_timestamp.month,packet_timestamp.day,packet_timestamp.hour,packet_timestamp.minute).timestamp()
-            packetSecondsAfterMin = (float(dt[0]) - roundDownMinTime)
-            latency = packetSecondsAfterMin*1000 - secMark
-            if (latency < 0) :
-                #print("[!!!] Minute mismatch")
-                latency = latency + 60000
-            #print("latency: " + str(latency))
-            
-            latency_array.append(latency)
-            
-            fout.write(str(dt[0])+','+str(bsmId)+','+str(secMark)+','+str(latency)+','+str(lat/10000000.0)+','+str(longstr/10000000.0)+','+str(speed_converted)+','+str(heading)+','+str(accel_long_converted)+','+ str(elevation)+'\n')
+           
+            # Packet datetime
+            packet_datetime = datetime.fromtimestamp(float(dt[0]), tz=timezone.utc)
+
+            # Calculate the base datetime for the current minute
+            baseMinute = datetime(packet_datetime.year, packet_datetime.month, packet_datetime.day, packet_datetime.hour, packet_datetime.minute, tzinfo=timezone.utc)
+
+            # Add the secMark (milliseconds) to the base minute
+            timeStamp = baseMinute + timedelta(milliseconds=secMark)
+
+            # Convert to Unix time with fractional seconds
+            unixTimestamp = timeStamp.timestamp()
+            formattedTimestamp = f"{unixTimestamp:.5f}"
+
+            # Calculate the time difference
+            timeDiff = float(dt[0]) - unixTimestamp
+
+            # Write the results to a file or process them
+            bsmString = (f"{dt[0]},{bsmId},{secMark},{timeStamp},{formattedTimestamp},{timeDiff}\n")
+            fout.write(bsmString)
+
+        # TIM
+        elif (msgid == "001f"):
+            msgCnt = msg()['value'][1]['msgCnt']
+            moy = msg()['value'][1]['timeStamp']
+            startTime = msg()['value'][1]['dataFrames'][1]['startTime']
+            durationTime = msg()['value'][1]['dataFrames'][1]['duratonTime']
+
+            # Packet year
+            packet_datetime = datetime.fromtimestamp(float(dt[0]), tz=timezone.utc)
+            year_from_packet = packet_datetime.year
+
+            # Calculate the base datetime for the year
+            baseDatetime = datetime(year_from_packet, 1, 1, tzinfo=timezone.utc)
+
+            # Add the minutes and milliseconds to the base datetime
+            timeStamp = baseDatetime + timedelta(minutes=moy)
+
+            # Convert the timestamp to Unix time with fractional seconds
+            unixTimestamp = timeStamp.timestamp()
+            formattedTimestamp = f"{unixTimestamp:.5f}"
+
+            timeDiff = float(dt[0]) - unixTimestamp
+
+            spatString = str(dt[0]) + "," + str(intersectionID) + "," + str(moy) + "," + str(millisec) + "," + str(timeStamp) + "," + str(formattedTimestamp) + "," + str(timeDiff) + "\n"
+            fout.write(spatString)
+
+        # PSM
+        elif (msgid =="0020"):
+            msgCnt = msg()['value'][1]['msgCnt']
+            secMark = msg()['value'][1]['secMark']
+
+            # Packet datetime
+            packet_datetime = datetime.fromtimestamp(float(dt[0]), tz=timezone.utc)
+
+            # Calculate the base datetime for the current minute
+            baseMinute = datetime(packet_datetime.year, packet_datetime.month, packet_datetime.day, packet_datetime.hour, packet_datetime.minute, tzinfo=timezone.utc)
+
+            # Add the secMark (milliseconds) to the base minute
+            timeStamp = baseMinute + timedelta(milliseconds=secMark)
+
+            # Convert to Unix time with fractional seconds
+            unixTimestamp = timeStamp.timestamp()
+            formattedTimestamp = f"{unixTimestamp:.5f}"
+
+            # Calculate the time difference
+            timeDiff = float(dt[0]) - unixTimestamp
+
+            # Write the results to a file or process them
+            psmString = (f"{dt[0]},{msgCnt},{secMark},{timeStamp},{formattedTimestamp},{timeDiff}\n")
+            fout.write(psmString)
+
 
         # SDSM
         elif (msgid == "0029"):

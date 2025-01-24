@@ -28,6 +28,8 @@ elif [ "$messageType" == "PSM" ]; then
 	messageTypeID=0020
 elif [ "$messageType" == "SDSM" ]; then
 	messageTypeID=0029
+elif [ "$messageType" == "TIM" ]; then
+	messageTypeID=001f
 elif [ "$messageType" == "Mobility" ]; then
 	printf "\nRequest, Response, Path, or Operation?\n"
 	read messageSecond
