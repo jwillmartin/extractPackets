@@ -57,7 +57,7 @@ def writeMessageHeader(msgType):
     elif (msgType=="MAP"):
         fout.write("packetTimestamp,intersectionID,latitude,longitude,laneWidth,signalGroupID\n")
     elif (msgType=="TIM"):
-        fout.write("packetTimestamp,msgCnt,timeStamp,startTime,durationTime\n")
+        fout.write("packetTimestamp,unixTimestamp,moy_timestamp_str,msgCnt,startTime,durationTime,timeDiff\n")
     elif (msgType=="PSM"):
         fout.write("packetTimestamp,msgCnt,secMark\n")
     elif (msgType=="SDSM"):
@@ -174,30 +174,21 @@ for dt in list1:
         # TIM
         elif (msgid == "001f"):
             msgCnt = msg()['value'][1]['msgCnt']
-            moy = msg()['value'][1]['timeStamp']
-            startTime = msg()['value'][1]['dataFrames'][1]['startTime']
-            durationTime = msg()['value'][1]['dataFrames'][1]['duratonTime']
+            startTime = msg()['value'][1]['dataFrames'][0]['startTime']
+            durationTime = msg()['value'][1]['dataFrames'][0]['duratonTime']
+            unixTimestamp = msg()['value'][1]['dataFrames'][0]['regions'][0]['name']
 
-            # Packet year
             packet_datetime = datetime.fromtimestamp(float(dt[0]), tz=timezone.utc)
-            year_from_packet = packet_datetime.year
-
-            # Calculate the base datetime for the year
-            baseDatetime = datetime(year_from_packet, 1, 1, tzinfo=timezone.utc)
-
-            # Add the minutes and milliseconds to the base datetime
-            timeStamp = baseDatetime + timedelta(minutes=moy)
-
-            # Convert the timestamp to Unix time with fractional seconds
-            unixTimestamp = timeStamp.timestamp()
-            formattedTimestamp = f"{unixTimestamp:.5f}"
+            current_year = datetime.now(timezone.utc).year
+            start_dt = datetime(current_year, 1, 1, tzinfo=timezone.utc) + timedelta(minutes=startTime)
+            moy_timestamp_str = start_dt.isoformat()
 
             # Calculate the time difference
-            timeDiff = float(dt[0]) - unixTimestamp
+            timeDiff = float(dt[0]) - float(unixTimestamp)
             latency_array.append(timeDiff)
 
-            spatString = str(dt[0]) + "," + str(intersectionID) + "," + str(moy) + "," + str(millisec) + "," + str(timeStamp) + "," + str(formattedTimestamp) + "," + str(timeDiff) + "\n"
-            fout.write(spatString)
+            timString = (f"{dt[0]},{unixTimestamp},{moy_timestamp_str},{msgCnt},{startTime},{durationTime},{timeDiff}\n")
+            fout.write(timString)
 
         # PSM
         elif (msgid =="0020"):

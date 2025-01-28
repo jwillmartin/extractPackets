@@ -15,7 +15,7 @@ mkdir -p decodedOutput
 cd $directory
 
 printf "\nWhat type of J2735 message was captured?\n"
-printf "MAP\nSPAT\nBSM\nPSM\nSDSM\nMobility\nTraffic Control\n\n"
+printf "MAP\nSPAT\nBSM\nPSM\nTIM\nSDSM\nMobility\nTraffic Control\n\n"
 IFS= read -r messageType
 
 if [ "$messageType" == "MAP" ]; then

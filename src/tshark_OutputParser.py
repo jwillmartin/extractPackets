@@ -18,6 +18,7 @@ open(fileName[0]+'_payload.csv', 'w', newline='') as write_obj:
         'bsm': '0014',
         'psm': '0020',
         'sdsm': '0029',
+        'tim': '001f',
         'req': '00f0',
         'res': '00f1',
         'mop': '00f2',
