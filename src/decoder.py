@@ -61,7 +61,7 @@ def writeMessageHeader(msgType):
     elif (msgType=="PSM"):
         fout.write("packetTimestamp,msgCnt,secMark\n")
     elif (msgType=="SDSM"):
-        fout.write("packetTimestamp,msgCnt,sourceId,lat,long,heading\n")
+        fout.write("packetTimestamp,packet_datetime,sDSM_epoch,sDSM_datetime,msgCnt,sourceId,lat,long,heading, timeDiff\n")
     elif (msgType=="Mobility Request"):
         fout.write("packetTimestamp,hostStaticId,hostBSMId,planId,strategy,planType,urgency,strategyParams,trajectoryStart,trajectory,expiration\n")
     elif (msgType=="Mobility Response"): 
@@ -128,7 +128,9 @@ for dt in list1:
             unixTimestamp = timeStamp.timestamp()
             formattedTimestamp = f"{unixTimestamp:.5f}"
 
+            # Calculate the time difference
             timeDiff = float(dt[0]) - unixTimestamp
+            latency_array.append(timeDiff)
 
             spatString = str(dt[0]) + "," + str(intersectionID) + "," + str(moy) + "," + str(millisec) + "," + str(timeStamp) + "," + str(formattedTimestamp) + "," + str(timeDiff) + "\n"
             fout.write(spatString)
@@ -164,8 +166,8 @@ for dt in list1:
 
             # Calculate the time difference
             timeDiff = float(dt[0]) - unixTimestamp
+            latency_array.append(timeDiff)
 
-            # Write the results to a file or process them
             bsmString = (f"{dt[0]},{bsmId},{secMark},{timeStamp},{formattedTimestamp},{timeDiff}\n")
             fout.write(bsmString)
 
@@ -190,7 +192,9 @@ for dt in list1:
             unixTimestamp = timeStamp.timestamp()
             formattedTimestamp = f"{unixTimestamp:.5f}"
 
+            # Calculate the time difference
             timeDiff = float(dt[0]) - unixTimestamp
+            latency_array.append(timeDiff)
 
             spatString = str(dt[0]) + "," + str(intersectionID) + "," + str(moy) + "," + str(millisec) + "," + str(timeStamp) + "," + str(formattedTimestamp) + "," + str(timeDiff) + "\n"
             fout.write(spatString)
@@ -215,8 +219,8 @@ for dt in list1:
 
             # Calculate the time difference
             timeDiff = float(dt[0]) - unixTimestamp
+            latency_array.append(timeDiff)
 
-            # Write the results to a file or process them
             psmString = (f"{dt[0]},{msgCnt},{secMark},{timeStamp},{formattedTimestamp},{timeDiff}\n")
             fout.write(psmString)
 
@@ -228,8 +232,30 @@ for dt in list1:
             refLat = msg()['value'][1]['refPos']['lat']/10000000.0
             refLong = msg()['value'][1]['refPos']['long']/10000000.0
             heading = msg()['value'][1]['objects'][0]['detObjCommon']['heading']
+            year = msg()['value'][1]['sDSMTimeStamp']['year']
+            month = msg()['value'][1]['sDSMTimeStamp']['month']
+            day = msg()['value'][1]['sDSMTimeStamp']['day']
+            hour = msg()['value'][1]['sDSMTimeStamp']['hour']
+            min = msg()['value'][1]['sDSMTimeStamp']['minute']
+            sec = msg()['value'][1]['sDSMTimeStamp']['second']
 
-            fout.write(str(dt[0]) + ',' + str(msgCnt) + ',' + str(sourceID) + ',' + str(refLat) + ',' + str(refLong) + ',' + str(heading) + '\n')
+            # Convert milliseconds to float seconds
+            fltSec = sec/1000.0
+            
+            # Create the datetime up to the minute, then add fractional seconds
+            sDSM_datetime = (datetime(year, month, day, hour, min, 0, tzinfo=timezone.utc) 
+                     + timedelta(seconds=fltSec))
+
+            # Convert datetime to an epoch timestamp
+            sDSM_epoch = sDSM_datetime.timestamp()
+            packet_datetime = datetime.fromtimestamp(float(dt[0]), tz=timezone.utc)
+
+            # Calculate the time difference
+            timeDiff = float(dt[0]) - sDSM_epoch
+            latency_array.append(timeDiff)
+
+            fout.write(f"{dt[0]},{packet_datetime.isoformat()},{sDSM_epoch},{sDSM_datetime.isoformat()},{msgCnt},{sourceID},{refLat},{refLong},{heading},{timeDiff}\n")
+
 
         # Test Messages
         elif (msgid == "00f0") :
@@ -307,9 +333,8 @@ for dt in list1:
             sys.exit("Invalid message type\n")
 
 
-if (msgid == "0014"): 
-    print("")
-    print("---------- Performance Metrics ----------")
+if (msgid == "0014" or msgid == "0013" or msgid == "001f" or msgid == "0020" or msgid == "0029"): 
+    print("\n---------- Performance Metrics ----------")
     latency_avg = numpy.average(latency_array)
     print("Latency Average: " + str(latency_avg))
     latency_std = numpy.std(latency_array)
