@@ -53,7 +53,7 @@ def writeSpatHeader():
 
 def writeMessageHeader(msgType):
     if (msgType == "BSM") :
-        fout.write("packetTimestamp,bsmId,secMark,timestamp,formattedTimestamp,timediff\n")
+        fout.write("packetTimestamp,bsmId,secMark,classification,keyType,role,timestamp,formattedTimestamp,timediff\n")
     elif (msgType=="MAP"):
         fout.write("packetTimestamp,intersectionID,latitude,longitude,laneWidth,signalGroupID\n")
     elif (msgType=="TIM"):
@@ -150,7 +150,26 @@ for dt in list1:
         elif (msgid == "0014"):
             bsmId = msg()['value'][1]['coreData']['id'].hex()
             secMark = msg()['value'][1]['coreData']['secMark']
-           
+
+            # Initialize optional fields to None in case not included
+            classification = None
+            keyType = None
+            role = None
+
+            # Safely check for partII
+            partII_list = msg()['value'][1].get('partII')
+            if partII_list and len(partII_list) > 0:
+                partII_item = partII_list[0]
+                partII_value = partII_item.get('partII-Value')
+                if partII_value and len(partII_value) > 1 and isinstance(partII_value[1], dict):
+                    extra_data = partII_value[1]
+                    classification = extra_data.get('classification')
+                    classDetails = extra_data.get('classDetails')
+                    if classDetails:
+                        keyType = classDetails.get('keyType')
+                        role = classDetails.get('role')
+
+
             # Packet datetime
             packet_datetime = datetime.fromtimestamp(float(dt[0]), tz=timezone.utc)
 
@@ -168,7 +187,7 @@ for dt in list1:
             timeDiff = float(dt[0]) - unixTimestamp
             latency_array.append(timeDiff)
 
-            bsmString = (f"{dt[0]},{bsmId},{secMark},{timeStamp},{formattedTimestamp},{timeDiff}\n")
+            bsmString = (f"{dt[0]},{bsmId},{secMark},{classification},{keyType},{role},{timeStamp},{formattedTimestamp},{timeDiff}\n")
             fout.write(bsmString)
 
         # TIM
