@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 from binascii import unhexlify
 import J2735_201603_2023_06_22
 import sys
