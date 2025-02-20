@@ -53,7 +53,7 @@ def writeSpatHeader():
 
 def writeMessageHeader(msgType):
     if (msgType == "BSM") :
-        fout.write("packetTimestamp,bsmId,secMark,classification,keyType,role,timestamp,formattedTimestamp,timediff\n")
+        fout.write("packetTimestamp,bsmId,msgCnt,secMark,classification,keyType,role,timestamp,formattedTimestamp,timediff\n")
     elif (msgType=="MAP"):
         fout.write("packetTimestamp,intersectionID,latitude,longitude,laneWidth,signalGroupID\n")
     elif (msgType=="TIM"):
@@ -149,6 +149,7 @@ for dt in list1:
         # BSM
         elif (msgid == "0014"):
             bsmId = msg()['value'][1]['coreData']['id'].hex()
+            msgCnt = msg()['value'][1]['coreData']['msgCnt']
             secMark = msg()['value'][1]['coreData']['secMark']
 
             # Initialize optional fields to None in case not included
@@ -187,7 +188,7 @@ for dt in list1:
             timeDiff = float(dt[0]) - unixTimestamp
             latency_array.append(timeDiff)
 
-            bsmString = (f"{dt[0]},{bsmId},{secMark},{classification},{keyType},{role},{timeStamp},{formattedTimestamp},{timeDiff}\n")
+            bsmString = (f"{dt[0]},{bsmId},{msgCnt},{secMark},{classification},{keyType},{role},{timeStamp},{formattedTimestamp},{timeDiff}\n")
             fout.write(bsmString)
 
         # TIM
