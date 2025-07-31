@@ -58,6 +58,8 @@ def writeMessageHeader(msgType):
         fout.write("packetTimestamp,intersectionID,latitude,longitude,laneWidth,signalGroupID\n")
     elif (msgType=="SDSM"):
         fout.write("packetTimestamp,msgCnt,sourceId,lat,long,heading\n")
+    elif (msgType=="TIM"):
+        fout.write("packetTimestamp,msgCnt,packetId,timestamp,frametype,content\n")
     elif (msgType=="Mobility Request"):
         fout.write("packetTimestamp,hostStaticId,hostBSMId,planId,strategy,planType,urgency,strategyParams,trajectoryStart,trajectory,expiration\n")
     elif (msgType=="Mobility Response"): 
@@ -172,6 +174,16 @@ for dt in list1:
             heading = msg()['value'][1]['objects'][0]['detObjCommon']['heading']
 
             fout.write(str(dt[0]) + ',' + str(msgCnt) + ',' + str(sourceID) + ',' + str(refLat) + ',' + str(refLong) + ',' + str(heading) + '\n')
+
+        # TIM
+        elif (msgid == "001f"):
+            msgCnt = msg()['value'][1]['msgCnt']
+            packetID = msg()['value'][1]['packetID'].hex()
+            timestamp = msg()['value'][1]['timeStamp']
+            frameType = msg()['value'][1]['dataFrames'][0]['frameType']
+            content = msg()['value'][1]['dataFrames'][0]['content']
+
+            fout.write(str(dt[0]) + ',' + str(msgCnt) + ',' + str(packetID) + ',' + str(timestamp) + ',' + str(frameType) + ',' + str(content) + '\n')
 
         # Test Messages
         elif (msgid == "00f0") :

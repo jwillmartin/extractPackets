@@ -1,4 +1,3 @@
-import json
 import sys
 from csv import reader, writer
 
@@ -16,6 +15,7 @@ open(fileName[0]+'_payload.csv', 'w', newline='') as write_obj:
         'map': '0012',
         'spat':'0013',
         'bsm': '0014',
+        'tim': '001f',
         'psm': '0020',
         'sdsm': '0029',
         'req': '00f0',

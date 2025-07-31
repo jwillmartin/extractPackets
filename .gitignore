@@ -1,0 +1,11 @@
+*.pcap
+*.csv
+*.pyc
+*.log
+*.all
+cfg
+*.diff
+*.gz
+stderr
+stdout
+info
