@@ -3,7 +3,7 @@
 #this takes the location of the executed script as opposed to the current location
 #this allows it to be run anywhere
 directory="`dirname \"$0\"`"
-directory="`( cd \"$directory\" && cd ../ && pwd )`"
+directory="`( cd \"$directory\" && cd ../../ && pwd )`"
 cd $directory
 
 mkdir -p data

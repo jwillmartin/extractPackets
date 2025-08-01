@@ -1,29 +1,26 @@
 ## Overview
-These scripts decode SAE J2735 messages. Not every field is decoded, but desired fields can easily be added in the decoder.py script. 
+These scripts decode and optionally plot SAE J2735 messages. Not every field is decoded, but desired fields can easily be added in the [decoder.py](/src/decoder.py) script. 
 The scripts are meant to decode only one message type at a time from one .pcap file. However, they may be edited to decode every message type within a file.
+Plotting scripts exist in the [plot](/src/plot/) directory.
+
 Feel free to make your own changes!
 
 ## Prerequisites:
-* python3:   `sudo apt install python3`
-* pip3:      `sudo apt install python3-pip`
-* wireshark: 
+* wireshark
+* tshark
 ```
 sudo add-apt-repository ppa:wireshark-dev/stable
 sudo apt-get update
-sudo apt-get -y install wireshark
+sudo apt-get -y install wireshark tshark
 ```
-* tshark:	 `sudo apt-get -y install tshark`
-* pycrate:   `pip3 install pycrate`
-* numpy:     `pip3 install numpy`
+* pycrate
+* numpy
+* pandas
+* folium
+```
+pip3 install pycrate numpy pandas folium
+```
 
-## Usage
-Save all pcap files in data folder.
-
-1. Run:
-	```
-	$ cd extractPackets/src/
-	$ bash extract.sh
-	```
-
-2. Follow the prompts to decode your desired files and message types.
-3. Decoded messages will be found in the .csv files in extractPackets/data/decodedOutput/
+# Usage
+1. Run the [extract](/src/extract/) script.
+2. Run any of the [plot](/src/plot/) scripts.
