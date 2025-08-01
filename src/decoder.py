@@ -57,7 +57,7 @@ def writeMessageHeader(msgType):
     elif (msgType=="MAP"):
         fout.write("packetTimestamp,intersectionID,latitude,longitude,laneWidth,signalGroupID\n")
     elif (msgType=="SDSM"):
-        fout.write("packetTimestamp,msgCnt,sourceId,lat,long,heading\n")
+        fout.write("packetTimestamp,msgCnt,sourceId,latitude,longitude,heading,objectType,payload\n")
     elif (msgType=="TIM"):
         fout.write("packetTimestamp,msgCnt,packetId,timestamp,frametype,content\n")
     elif (msgType=="Mobility Request"):
@@ -172,8 +172,9 @@ for dt in list1:
             refLat = msg()['value'][1]['refPos']['lat']/10000000.0
             refLong = msg()['value'][1]['refPos']['long']/10000000.0
             heading = msg()['value'][1]['objects'][0]['detObjCommon']['heading']
+            objectType = msg()['value'][1]['objects'][0]['detObjCommon']['objType']
 
-            fout.write(str(dt[0]) + ',' + str(msgCnt) + ',' + str(sourceID) + ',' + str(refLat) + ',' + str(refLong) + ',' + str(heading) + '\n')
+            fout.write(str(dt[0]) + ',' + str(msgCnt) + ',' + str(sourceID) + ',' + str(refLat) + ',' + str(refLong) + ',' + str(heading) + ',' + str(objectType) + ',' + str(dt[1]) + '\n')
 
         # TIM
         elif (msgid == "001f"):
