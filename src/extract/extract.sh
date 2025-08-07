@@ -133,7 +133,7 @@ getPayload() {
 	cd $directory/data/tsharkOutput
 	# parse tshark output to get rid of unnecessary bytes in front of payloads
 	for i in *; do
-		python3 $directory/src/tshark_OutputParser.py $i $messageType $payloadType
+		python3 $directory/src/extract/tshark_OutputParser.py $i $messageType $payloadType
 	done
 	mv *_payload.csv $directory/data/payloadOutput
 	rm *
@@ -147,7 +147,7 @@ decodePackets() {
 		file=$(basename -- "$i")
 		fileName="decoded_${file%.*}.csv"
 		echo "$fileName"
-		python3 $directory/src/decoder.py $i ${fileName} "$messageType" $messageTypeID
+		python3 $directory/src/extract/decoder.py $i ${fileName} "$messageType" $messageTypeID
 	done
 
 	mv *decoded* $directory/data/decodedOutput
