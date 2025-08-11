@@ -57,7 +57,7 @@ def writeMessageHeader(msgType):
     elif (msgType=="MAP"):
         fout.write("packetTimestamp,intersectionID,latitude,longitude,laneWidth,signalGroupID\n")
     elif (msgType=="SDSM"):
-        fout.write("packetTimestamp,msgCnt,sourceId,latitude,longitude,heading,objectType,payload\n")
+        fout.write("packetTimestamp,datetime,msgCnt,sourceId,latitude,longitude,heading,objectType,payload\n")
     elif (msgType=="TIM"):
         fout.write("packetTimestamp,msgCnt,packetId,timestamp,frametype,content\n")
     elif (msgType=="Mobility Request"):
@@ -167,6 +167,7 @@ for dt in list1:
 
         # SDSM
         elif (msgid == "0029"):
+            dateTime = datetime.datetime.fromtimestamp(int(float(dt[0])), tz=datetime.timezone.utc)
             msgCnt = msg()['value'][1]['msgCnt']
             sourceID = msg()['value'][1]['sourceID'].hex()
             refLat = msg()['value'][1]['refPos']['lat']/10000000.0
@@ -174,7 +175,7 @@ for dt in list1:
             heading = msg()['value'][1]['objects'][0]['detObjCommon']['heading']
             objectType = msg()['value'][1]['objects'][0]['detObjCommon']['objType']
 
-            fout.write(str(dt[0]) + ',' + str(msgCnt) + ',' + str(sourceID) + ',' + str(refLat) + ',' + str(refLong) + ',' + str(heading) + ',' + str(objectType) + ',' + str(dt[1]) + '\n')
+            fout.write(str(dt[0]) + ',' + str(dateTime) + ',' + str(msgCnt) + ',' + str(sourceID) + ',' + str(refLat) + ',' + str(refLong) + ',' + str(heading) + ',' + str(objectType) + ',' + str(dt[1]) + '\n')
 
         # TIM
         elif (msgid == "001f"):
