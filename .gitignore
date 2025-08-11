@@ -10,3 +10,4 @@ cfg
 stderr
 stdout
 info
+*.json
