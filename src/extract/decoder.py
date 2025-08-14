@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from binascii import unhexlify
-import J2735_201603_2023_06_22
+import J2735_202409
 import sys
 import csv
 import numpy
@@ -99,7 +99,7 @@ prevSpatTimestamp = 0
 for dt in list1:
 
     if (dt[1][0:4]==msgid):
-        msg = J2735_201603_2023_06_22.DSRC.MessageFrame
+        msg = J2735_202409.MessageFrame.MessageFrame
         try:
             msg.from_uper(unhexlify(dt[1]))
         except:
