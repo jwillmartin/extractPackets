@@ -59,7 +59,7 @@ def writeMessageHeader(msgType):
     elif (msgType=="SDSM"):
         fout.write("packetTimestamp,datetime,msgCnt,sourceId,latitude,longitude,heading,objectType,payload\n")
     elif (msgType=="TIM"):
-        fout.write("packetTimestamp,msgCnt,packetId,timestamp,frametype,content\n")
+        fout.write("packetTimestamp,msgCnt,packetId,timestamp,frametype,lat,long,content\n")
     elif (msgType=="Mobility Request"):
         fout.write("packetTimestamp,hostStaticId,hostBSMId,planId,strategy,planType,urgency,strategyParams,trajectoryStart,trajectory,expiration\n")
     elif (msgType=="Mobility Response"): 
@@ -105,21 +105,28 @@ for dt in list1:
         except:
             continue
 
+        payload = msg()
+        if not payload or not isinstance(payload, dict) or 'value' not in payload:
+            continue
+        try:
+            mval = payload['value'][1]
+        except Exception:
+            continue
         
         # SPAT
         if (msgid == "0013"):
-            intersectionID = msg()['value'][1]['intersections'][0]['id']['id']
-            instersectionPhaseArray = msg()['value'][1]['intersections'][0]['states']
+            intersectionID = mval['intersections'][0]['id']['id']
+            instersectionPhaseArray = mval['intersections'][0]['states']
             
             # used later when exact number or phases is known
             numPhases = 2 # use number of desired phases
             spatPhaseArray = [None] * numPhases
 
             for phase in range(len(instersectionPhaseArray)):
-                currentPhase = msg()['value'][1]['intersections'][0]['states'][phase].get('signalGroup')
-                currentState = str(msg()['value'][1]['intersections'][0]['states'][phase]['state-time-speed'][0]['eventState'])
-                minEndTime = msg()['value'][1]['intersections'][0]['states'][phase]['state-time-speed'][0]['timing']['minEndTime']
-                maxEndTime = msg()['value'][1]['intersections'][0]['states'][phase]['state-time-speed'][0]['timing']['maxEndTime']
+                currentPhase = mval['intersections'][0]['states'][phase].get('signalGroup')
+                currentState = str(mval['intersections'][0]['states'][phase]['state-time-speed'][0]['eventState'])
+                minEndTime = mval['intersections'][0]['states'][phase]['state-time-speed'][0]['timing']['minEndTime']
+                maxEndTime = mval['intersections'][0]['states'][phase]['state-time-speed'][0]['timing']['maxEndTime']
                 if (minEndTime == 36001):
                     timeEndSec = maxEndTime/6
                 else:
@@ -130,26 +137,26 @@ for dt in list1:
 
         # MAP
         elif (msgid == "0012"):
-            intersectionID = msg()['value'][1]['intersections'][0]['id']['id']
+            intersectionID = mval['intersections'][0]['id']['id']
             #if intersectionID == intersection:
-            lat = msg()['value'][1]['intersections'][0]['refPoint']['lat']
-            longstr = msg()['value'][1]['intersections'][0]['refPoint']['long']
-            laneWidth = msg()['value'][1]['intersections'][0]['laneWidth']
-            signalGroupID = msg()['value'][1]['intersections'][0]['laneSet'][0]['connectsTo'][0]['signalGroup']
+            lat = mval['intersections'][0]['refPoint']['lat']
+            longstr = mval['intersections'][0]['refPoint']['long']
+            laneWidth = mval['intersections'][0]['laneWidth']
+            signalGroupID = mval['intersections'][0]['laneSet'][0]['connectsTo'][0]['signalGroup']
 
             fout.write(str(dt[0])+','+str(intersectionID)+','+str(lat/10000000.0)+','+str(longstr/10000000.0)+','+str(laneWidth)+','+str(signalGroupID)+'\n')
         
         # BSM
         elif (msgid == "0014"):
-            bsmId = msg()['value'][1]['coreData']['id'].hex()
-            lat= msg()['value'][1]['coreData']['lat']
-            longstr = msg()['value'][1]['coreData']['long']
-            speed = msg()['value'][1]['coreData']['speed']
-            elevation = msg()['value'][1]['coreData']['elev']
-            secMark = msg()['value'][1]['coreData']['secMark']
-            heading = msg()['value'][1]['coreData']['heading']
+            bsmId = mval['coreData']['id'].hex()
+            lat= mval['coreData']['lat']
+            longstr = mval['coreData']['long']
+            speed = mval['coreData']['speed']
+            elevation = mval['coreData']['elev']
+            secMark = mval['coreData']['secMark']
+            heading = mval['coreData']['heading']
             speed_converted = speed*0.02 #m/s
-            accel_long = msg()['value'][1]['coreData']['accelSet']['long']
+            accel_long = mval['coreData']['accelSet']['long']
             accel_long_converted = accel_long*0.01 #m^s^2
             
             packet_timestamp = datetime.datetime.fromtimestamp(int(float(dt[0])))
@@ -168,90 +175,92 @@ for dt in list1:
         # SDSM
         elif (msgid == "0029"):
             dateTime = datetime.datetime.fromtimestamp(int(float(dt[0])), tz=datetime.timezone.utc)
-            msgCnt = msg()['value'][1]['msgCnt']
-            sourceID = msg()['value'][1]['sourceID'].hex()
-            refLat = msg()['value'][1]['refPos']['lat']/10000000.0
-            refLong = msg()['value'][1]['refPos']['long']/10000000.0
-            heading = msg()['value'][1]['objects'][0]['detObjCommon']['heading']
-            objectType = msg()['value'][1]['objects'][0]['detObjCommon']['objType']
+            msgCnt = mval['msgCnt']
+            sourceID = mval['sourceID'].hex()
+            refLat = mval['refPos']['lat']/10000000.0
+            refLong = mval['refPos']['long']/10000000.0
+            heading = mval['objects'][0]['detObjCommon']['heading']
+            objectType = mval['objects'][0]['detObjCommon']['objType']
 
             fout.write(str(dt[0]) + ',' + str(dateTime) + ',' + str(msgCnt) + ',' + str(sourceID) + ',' + str(refLat) + ',' + str(refLong) + ',' + str(heading) + ',' + str(objectType) + ',' + str(dt[1]) + '\n')
 
         # TIM
         elif (msgid == "001f"):
-            msgCnt = msg()['value'][1]['msgCnt']
-            packetID = msg()['value'][1]['packetID'].hex()
-            timestamp = msg()['value'][1]['timeStamp']
-            frameType = msg()['value'][1]['dataFrames'][0]['frameType']
-            content = msg()['value'][1]['dataFrames'][0]['content']
+            msgCnt = mval['msgCnt']
+            packetID = mval['packetID'].hex()
+            timestamp = mval['timeStamp']
+            frameType = mval['dataFrames'][0]['frameType']
+            content = mval['dataFrames'][0]['content']
+            lat = mval['dataFrames'][0]['regions'][0]['anchor']['lat']
+            long = mval['dataFrames'][0]['regions'][0]['anchor']['long']
 
-            fout.write(str(dt[0]) + ',' + str(msgCnt) + ',' + str(packetID) + ',' + str(timestamp) + ',' + str(frameType) + ',' + str(content) + '\n')
+            fout.write(str(dt[0]) + ',' + str(msgCnt) + ',' + str(packetID) + ',' + str(timestamp) + ',' + str(frameType) + ',' + str(lat) + ',' + str(long) + ',' + str(content) + '\n')
 
         # Test Messages
         elif (msgid == "00f0") :
-            hostStaticId = msg()['value'][1]['header']['hostStaticId']
-            hostBSMId = msg()['value'][1]['header']['hostBSMId']
-            planId = msg()['value'][1]['header']['planId']
-            strategy = msg()['value'][1]['body']['strategy']
-            planType = msg()['value'][1]['body']['planType']
-            urgency = msg()['value'][1]['body']['urgency']
-            strategyParams = msg()['value'][1]['body']['strategyParams']
-            trajectoryStart = msg()['value'][1]['body']['trajectoryStart']
-            trajectory = msg()['value'][1]['body']['trajectory']
-            expiration = msg()['value'][1]['body']['expiration']
+            hostStaticId = mval['header']['hostStaticId']
+            hostBSMId = mval['header']['hostBSMId']
+            planId = mval['header']['planId']
+            strategy = mval['body']['strategy']
+            planType = mval['body']['planType']
+            urgency = mval['body']['urgency']
+            strategyParams = mval['body']['strategyParams']
+            trajectoryStart = mval['body']['trajectoryStart']
+            trajectory = mval['body']['trajectory']
+            expiration = mval['body']['expiration']
 
             fout.write(str(dt[0])+','+str(hostStaticId)+','+str(hostBSMId)+','+str(planId)+','+str(strategy)+','+str(planType)+','+str(urgency)+''+str(strategyParams)+''+str(trajectoryStart)+''+str(trajectory)+''+str(expiration)+''+'\n')
 
         elif (msgid == "00f1") :
-            hostStaticId = msg()['value'][1]['header']['hostStaticId']
-            hostBSMId = msg()['value'][1]['header']['hostBSMId']
-            planId = msg()['value'][1]['header']['planId']
-            urgency = msg()['value'][1]['body']['urgency']
-            isAccepted = msg()['value'][1]['body']['isAccepted']
+            hostStaticId = mval['header']['hostStaticId']
+            hostBSMId = mval['header']['hostBSMId']
+            planId = mval['header']['planId']
+            urgency = mval['body']['urgency']
+            isAccepted = mval['body']['isAccepted']
 
             fout.write(str(dt[0])+','+str(hostStaticId)+','+str(hostBSMId)+','+str(planId)+','+str(urgency)+','+str(isAccepted)+'\n')
 
         elif (msgid == "00f2") :
-            hostStaticId = msg()['value'][1]['header']['hostStaticId']
-            hostBSMId = msg()['value'][1]['header']['hostBSMId']
-            planId = msg()['value'][1]['header']['planId']
-            location = msg()['value'][1]['body']['location']
-            trajectory = msg()['value'][1]['body']['trajectory']
+            hostStaticId = mval['header']['hostStaticId']
+            hostBSMId = mval['header']['hostBSMId']
+            planId = mval['header']['planId']
+            location = mval['body']['location']
+            trajectory = mval['body']['trajectory']
 
             fout.write(str(dt[0])+','+str(hostStaticId)+','+str(hostBSMId)+','+str(planId)+','+str(location)+','+str(trajectory)+'\n')
 
         elif (msgid == "00f3") :
-            hostStaticId = msg()['value'][1]['header']['hostStaticId']
-            hostBSMId = msg()['value'][1]['header']['hostBSMId']
-            planId = msg()['value'][1]['header']['planId']
-            strategy = msg()['value'][1]['body']['strategy']
-            operationParams = msg()['value'][1]['body']['operationParams']
+            hostStaticId = mval['header']['hostStaticId']
+            hostBSMId = mval['header']['hostBSMId']
+            planId = mval['header']['planId']
+            strategy = mval['body']['strategy']
+            operationParams = mval['body']['operationParams']
             
             fout.write(str(dt[0])+','+str(hostStaticId)+','+str(hostBSMId)+','+str(planId)+','+str(strategy)+','+str(operationParams)+'\n')
 
         elif (msgid == "00f4") :
-            reqid = msg()['value'][1]['body'][1]['reqid']
-            reqseq = msg()['value'][1]['body'][1]['reqseq']
-            scale = msg()['value'][1]['body'][1]['scale']
-            bounds = msg()['value'][1]['body'][1]['bounds']
+            reqid = mval['body'][1]['reqid']
+            reqseq = mval['body'][1]['reqseq']
+            scale = mval['body'][1]['scale']
+            bounds = mval['body'][1]['bounds']
 
             newReqId = str(convID(reqid, 8)).replace(",", " ")
 
             fout.write(str(dt[0])+','+newReqId+','+str(reqseq)+','+str(scale)+','+str(bounds)+','+str(dt[1])+'\n')
         
         elif (msgid == "00f5") :
-            reqid = msg()['value'][1]['body'][1]['reqid']
-            reqseq = msg()['value'][1]['body'][1]['reqseq']
-            msgtot = msg()['value'][1]['body'][1]['msgtot']
-            msgnum = msg()['value'][1]['body'][1]['msgnum']
-            tcmId = msg()['value'][1]['body'][1]['id']
-            updated = msg()['value'][1]['body'][1]['updated']
-            label = msg()['value'][1]['body'][1]['package']['label']
-            tcId = msg()['value'][1]['body'][1]['package']['tcids'][0]
-            vclasses = msg()['value'][1]['body'][1]['params']['vclasses']
-            schedule = msg()['value'][1]['body'][1]['params']['schedule']
-            detail = msg()['value'][1]['body'][1]['params']['detail']
-            geometry = msg()['value'][1]['body'][1]['geometry']
+            reqid = mval['body'][1]['reqid']
+            reqseq = mval['body'][1]['reqseq']
+            msgtot = mval['body'][1]['msgtot']
+            msgnum = mval['body'][1]['msgnum']
+            tcmId = mval['body'][1]['id']
+            updated = mval['body'][1]['updated']
+            label = mval['body'][1]['package']['label']
+            tcId = mval['body'][1]['package']['tcids'][0]
+            vclasses = mval['body'][1]['params']['vclasses']
+            schedule = mval['body'][1]['params']['schedule']
+            detail = mval['body'][1]['params']['detail']
+            geometry = mval['body'][1]['geometry']
 
             newReqId = str(convID(reqid, 8)).replace(",", " ")
             newTcmId = str(convID(tcmId, 16)).replace(",", " ")
