@@ -62,9 +62,7 @@ else echo "Invalid J2735 message type..."
 	exit
 fi
 
-payloadType="hex"
 messageTypeIdFound=false
-
 
 searchForMessageTypeIdInFile() {
 	fileCheck=$1
@@ -73,7 +71,7 @@ searchForMessageTypeIdInFile() {
 	messageTypeIdFound=false
 
 	echo
-	#check the first 10 packets for the desired message type ID
+	# Check the first 10 packets for the desired message type ID
 	for (( c=1; c<=$numPacketsToCheck; c++ )); do
 		currentPayload=$(sed '$cq;d' $fileCheck | awk -F ',' '{print $2}')
 		if [[ "$currentPayload" == *"$messageTypeIdToFind"* ]]; then
@@ -83,7 +81,6 @@ searchForMessageTypeIdInFile() {
 		fi
 	done
 }
-
 
 extractPackets() { 
 	echo
@@ -109,12 +106,10 @@ extractPackets() {
 	if [ $messageTypeIdFound == true ]; then
 			# The first packet contains the message id
 			printf "\nSuccessfully decoded pcap into hex payloads\n"
-			payloadType="hex"
 	else
 			# The first packet does not contain the message id. This is most likely becuase payload is contained in ASCII
 			printf "\nCould not find message ID in hex decoded payloads, trying ascii\n"
 			tshark -r $fileRead -o data.show_as_text:TRUE --disable-protocol wsmp -T fields -E separator=, -e frame.time_epoch -e data.text > $directory/data/tsharkOutput/$fileWrite
-			payloadType="ascii"
 			
 			searchForMessageTypeIdInFile $directory/data/tsharkOutput/$fileWrite $messageTypeID 10
 			
@@ -128,17 +123,15 @@ extractPackets() {
 	fi 
 }
 
-
 getPayload() {
 	cd $directory/data/tsharkOutput
-	# parse tshark output to get rid of unnecessary bytes in front of payloads
+	# Parse tshark output to get rid of unnecessary bytes in front of payloads
 	for i in *; do
-		python3 $directory/src/extract/tshark_OutputParser.py $i $messageType $payloadType
+		python3 $directory/src/extract/tshark_OutputParser.py $i $messageTypeID
 	done
 	mv *_payload.csv $directory/data/payloadOutput
 	rm *
 }
-
 
 decodePackets() {
 	cd $directory/data/payloadOutput
@@ -154,7 +147,6 @@ decodePackets() {
 	rm *
 	printf 'Complete.\n'
 }
-
 
 processing() {
 	extractPackets
