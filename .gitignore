@@ -216,3 +216,4 @@ stderr
 stdout
 info
 *.json
+*.txt

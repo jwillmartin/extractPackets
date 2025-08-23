@@ -1,3 +1,90 @@
+import Ieee1609Dot2
+import Ieee1609Dot3Wsm
+import J2735_202409
+import os
+from binascii import unhexlify
+from contextlib import redirect_stderr, redirect_stdout
+
+def getWSM(data: str):
+    """Extract WSM unsecuredData from WSMP
+
+    Parameters:
+        data (str): The WSMP data to extract from.
+
+    Returns:
+        str: The extracted WSM unsecuredData. May return None if extraction fails (malformed packet).
+    """
+    wsm = None
+    unsecuredData = None
+
+    # Get WSMP info
+    b = unhexlify(data.strip("\\n"))
+    dot3 = Ieee1609Dot3Wsm.Ieee1609Dot3Wsm.ShortMsgNpdu
+    dot3.from_uper(b)
+
+    # Extract WSM (ShortMsgData) from WSMP
+    try:
+        wsm = dot3()['body'].hex()
+    except Exception:
+        return unsecuredData
+
+    # Get WSM (Ieee1609Dot2Data) info
+    dot2 = Ieee1609Dot2.Ieee1609Dot2.Ieee1609Dot2Data
+    # Pycrate decoders print to stderr on CHOICE extension tag issues; silence here
+    with open(os.devnull, 'w') as devnull, redirect_stderr(devnull), redirect_stdout(devnull):
+        dot2.from_oer(unhexlify(wsm))
+
+    # Extract unsecuredData from WSM
+    try:
+        unsecuredData = dot2()['content'][1].hex() # if wsm unsigned
+    except Exception:
+        unsecuredData = dot2()['content'][1]['tbsData']['payload']['data']['content'][1].hex() # if wsm signed
+
+    return unsecuredData
+
+def parseWSM(payload_src: str, msg_id: str):
+    """Manually parse for the WSM unsecuredData.
+
+    Parameters:
+        data (str): The data to parse.
+
+    Returns:
+        str: The parsed WSM unsecured data. May return None if no payload is found.
+    """
+    # Initialize message frame
+    MessageFrame = J2735_202409.MessageFrame.MessageFrame
+    for search_start in range(len(payload_src)):
+        idx = payload_src.find(msg_id, search_start)
+
+        # Stop searching this row if DSRCmsgID not found or not enough data remaining
+        if idx == -1 or idx > len(payload_src) - 16:
+            break
+
+        # Create payload buffer and strip newline in case ascii
+        buf = payload_src[idx:].strip('\\n')
+
+        # Validate frame size and skip known false-positive BSM PSID pattern
+        if not isValidMsgSize(buf):
+            # Advance past this occurrence and keep searching
+            search_start = idx + 3
+            continue
+        if msg_id == "0020" and isBSMPSID(buf):
+            # Advance past this occurrence and keep searching
+            search_start = idx + 3
+            continue
+
+        # Final check to ensure message is valid
+        try:
+            # Silence on failure
+            with open(os.devnull, 'w') as devnull, redirect_stderr(devnull), redirect_stdout(devnull):
+                MessageFrame.from_uper(unhexlify(buf))
+        except Exception:
+            # Advance past this occurrence and keep searching quietly
+            search_start = idx + 3
+            continue
+        return buf
+    return None
+
 def isValidMsgSize(line):
     """Checks actual message size against size specified in MessageFrame.
     Args:
@@ -20,8 +107,7 @@ def isValidMsgSize(line):
         # If the message is larger than expected, it may contain a certificate or digest hash
         if isSigned(newFrame):
             return True
-    else:
-        return False
+    return False
 
 def isSigned(frame):
     """Checks if the message is signed by looking for a certificate or digest hash.
@@ -43,7 +129,6 @@ def isSigned(frame):
         hashId = possibleDigest[2:18]
         if hashId:
             return True
-
     return False
 
 def isBSMPSID(line):
@@ -67,10 +152,6 @@ def isBSMPSID(line):
     MAX_BYTES_AFTER_ELEM = 5   # 5 bytes = 10 hex chars
 
     if not line or len(line) < 4:
-        return False
-
-    # Only consider buffers that start with PSID 0x0020.
-    if line[:4] != PSID_PSM:
         return False
 
     # Compute search bounds without creating substrings.

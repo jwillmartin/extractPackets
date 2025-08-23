@@ -166,9 +166,11 @@ fp = csv.reader(fp1,delimiter=',')
 list1 = list(fp)
 
 latency_array = []
+latency_samples = []  # (packet_ts, latency_ms) for per-second aggregation
 prevSpatTimestamp = 0
 spat_timestamps = []  # collect timestamps (prefer payload time; fallback to packet time)
 spat_latencies_ms = []  # collect per-message latency based on time_delta_ms
+spat_latency_samples = []  # (packet_ts, latency_ms) for per-second aggregation
 seen_payloads = set()  # track unique payload hex strings
 duplicate_payloads = []  # list of (packetTimestamp, payloadHex)
 payload_counts = {}  # payloadHex -> count
@@ -257,6 +259,8 @@ for dt in list1:
             try:
                 if time_delta_ms != '':
                     spat_latencies_ms.append(float(time_delta_ms))
+                    # use packet capture timestamp for per-second grouping
+                    spat_latency_samples.append((float(dt[0]), float(time_delta_ms)))
             except Exception:
                 pass
 
@@ -291,6 +295,10 @@ for dt in list1:
             #print("latency: " + str(latency))
             
             latency_array.append(latency)
+            try:
+                latency_samples.append((float(dt[0]), float(latency)))
+            except Exception:
+                pass
             
             fout.write(str(dt[0])+','+str(bsmId)+','+str(secMark)+','+str(latency)+','+str(lat/10000000.0)+','+str(long/10000000.0)+','+str(speed_converted)+','+str(heading)+','+str(accel_long_converted)+','+ str(elevation)+'\n')
 
@@ -393,14 +401,18 @@ for dt in list1:
         else:
             sys.exit("Invalid message type\n")
 
-
+# BSM Performance Metrics
 if (msgid == "0014"): 
     print("")
     print("---------- Performance Metrics ----------")
-    latency_avg = numpy.average(latency_array)
-    print("Latency Average: " + str(latency_avg))
-    latency_std = numpy.std(latency_array)
-    print("Latency Standard Deviation (Jitter): " + str(latency_std))
+    # Per-second aggregation (expect ~10 payloads per second)
+    if latency_array:
+        latency_avg = numpy.average(latency_array)
+        latency_std = numpy.std(latency_array)
+        print("Latency Average: " + str(latency_avg))
+        print("Latency Standard Deviation (Jitter): " + str(latency_std))
+    else:
+        print("No latency samples available.")
 
 # SPAT message interval rate summary
 if (msgid == "0013"):
@@ -428,25 +440,20 @@ if (msgid == "0013"):
         print("---------- SPAT Message Interval ----------")
         print("Insufficient data to compute interval rate.")
 
-# Write duplicate payloads log (if any). Name it to be moved with decoded outputs.
+# Write duplicate payloads log (if any)
 if duplicate_payloads:
     try:
         out_name = sys.argv[2]
         base_name = out_name[:-4] if out_name.endswith('.csv') else out_name
-        dup_log = f"{base_name}_duplicates.log"
-        with open(dup_log, 'w') as df:
-            df.write("packetTimestamp,payloadHex\n")
-            for ts, phex in duplicate_payloads:
-                df.write(f"{ts},{phex}\n")
         # Also write a summary by payload hex for those with count >= 2
-        summary_path = f"{base_name}_duplicates_summary.csv"
+        dup_log = f"{base_name}_duplicates_summary.csv"
         unique_dupe_count = len(duplicates_unique) if duplicates_unique else len([k for k, v in payload_counts.items() if v > 1])
-        with open(summary_path, 'w') as sf:
+        with open(dup_log, 'w') as sf:
             sf.write("payloadHex,count\n")
             for phex, cnt in payload_counts.items():
                 if cnt > 1:
                     sf.write(f"{phex},{cnt}\n")
 
-        print(f"Duplicate payloads logged to {dup_log} ({len(duplicate_payloads)} duplicates, {unique_dupe_count} unique payloads duplicated); summary: {summary_path}")
+        print(f"Duplicate payloads logged to {dup_log} ({len(duplicate_payloads)} duplicates, {unique_dupe_count} unique payloads duplicated);")
     except Exception as e:
         print(f"Failed to write duplicate payload log: {e}")
