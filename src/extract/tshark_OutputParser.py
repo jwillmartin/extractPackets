@@ -1,44 +1,32 @@
 #!/usr/bin/env python3
 import sys
+import parser_helper
 from csv import reader, writer
 
-inFile = sys.argv[1]
-payloadType=sys.argv[3]
-print("Payload Type: " + payloadType)
-fileName = inFile.split(".")
+IN_FILE = sys.argv[1]
+FILE_NAME = IN_FILE.split(".")[0]
+MESSAGE_ID = sys.argv[2]
 
-with open(fileName[0]+'.csv') as read_obj, \
-open(fileName[0]+'_payload.csv', 'w', newline='') as write_obj:
-    csv_reader = reader(read_obj)
-    csv_writer = writer(write_obj)
+def main():
+    with open(FILE_NAME + '.csv') as read_obj, open(FILE_NAME + '_payload.csv', 'w', newline='') as write_obj:
+        csv_reader = reader(read_obj)
+        csv_writer = writer(write_obj)
 
-    substr = {
-        'map': '0012',
-        'spat':'0013',
-        'bsm': '0014',
-        'tim': '001f',
-        'psm': '0020',
-        'sdsm': '0029',
-        'req': '00f0',
-        'res': '00f1',
-        'mop': '00f2',
-        'mom': '00f3',
-        'tcr': '00f4',
-        'tcm': '00f5'
-    }
+        for row in csv_reader:
+            payload_src = row[1]
 
-    for row in csv_reader:
-        index = {}
-        smallerIndex = 10000
-        
-        #remove newlines for ascii
-        if( payloadType == "ascii" ):
-            row[1] = row[1].replace("\\n","")
-        
-        for k in substr:
-            if substr[k] in row[1]:
-                index[k] = row[1].find(substr[k])
-                if index[k] < smallerIndex:
-                    smallerIndex = index[k]
-                    msg = row[1][smallerIndex:]
-                    csv_writer.writerow([row[0],msg])
+            try:
+                wsm = parser_helper.getWSM(payload_src)
+                csv_writer.writerow([row[0], wsm])
+            except Exception:
+                # Search entire payload for message id
+                unsecuredData = parser_helper.parseWSM(payload_src, MESSAGE_ID)
+                if unsecuredData:
+                    csv_writer.writerow([row[0], unsecuredData])
+
+        # Done processing files
+        read_obj.close()
+        write_obj.close()
+
+if __name__=="__main__":
+    main()
