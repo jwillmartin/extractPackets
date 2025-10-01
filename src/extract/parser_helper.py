@@ -1,6 +1,6 @@
 import Ieee1609Dot2
 import Ieee1609Dot3Wsm
-import J2735_202409
+import j2735_202409
 import os
 from binascii import unhexlify
 from contextlib import redirect_stderr, redirect_stdout
@@ -52,7 +52,7 @@ def parseWSM(payload_src: str, msg_id: str):
         str: The parsed WSM unsecured data. May return None if no payload is found.
     """
     # Initialize message frame
-    MessageFrame = J2735_202409.MessageFrame.MessageFrame
+    MessageFrame = j2735_202409.MessageFrame.MessageFrame
     for search_start in range(len(payload_src)):
         idx = payload_src.find(msg_id, search_start)
 
@@ -64,10 +64,6 @@ def parseWSM(payload_src: str, msg_id: str):
         buf = payload_src[idx:].strip('\\n')
 
         # Validate frame size and skip known false-positive BSM PSID pattern
-        if not isValidMsgSize(buf):
-            # Advance past this occurrence and keep searching
-            search_start = idx + 3
-            continue
         if msg_id == "0020" and isBSMPSID(buf):
             # Advance past this occurrence and keep searching
             search_start = idx + 3
@@ -84,52 +80,6 @@ def parseWSM(payload_src: str, msg_id: str):
             continue
         return buf
     return None
-
-def isValidMsgSize(line):
-    """Checks actual message size against size specified in MessageFrame.
-    Args:
-        line (str): Full message under test.
-    Returns:
-        bool: Validity of message size.
-    """
-    tempFrame = line[6:]
-    if (len(tempFrame) > 510):
-        frameSize = 8
-        encodedSize = int(line[5:8], 16) * 2
-    else:
-        frameSize = 6
-        encodedSize = int(line[4:6], 16) * 2
-
-    newFrame = line[frameSize:]
-    if (encodedSize == len(newFrame)):
-        return True
-    elif (encodedSize < len(newFrame) - 150):
-        # If the message is larger than expected, it may contain a certificate or digest hash
-        if isSigned(newFrame):
-            return True
-    return False
-
-def isSigned(frame):
-    """Checks if the message is signed by looking for a certificate or digest hash.
-    Returns:
-        bool: Validity of signed message.
-    """
-    # Find all possible cert or digest hashes, by length
-    length = len(frame)
-    possibleCert = frame[frame.find("00030180"):]
-    possibleDigest = frame[length-(76*2)+2:]
-
-    # Extract all verified cert or digest hashes
-    if (possibleCert[0:8] == "00030180"):
-        fullCert = possibleCert[8:24]
-        if fullCert:
-            return True
-
-    if ((possibleDigest[0:2] == possibleDigest[18:20]) and possibleDigest[18:20] == "80"):
-        hashId = possibleDigest[2:18]
-        if hashId:
-            return True
-    return False
 
 def isBSMPSID(line):
     """Detect a known false-positive where PSID 0x0020 (PSM) is followed by the

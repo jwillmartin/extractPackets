@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from binascii import unhexlify
-import J2735_202409
+import j2735_202409
 import sys
 import csv
 import numpy
@@ -180,7 +180,7 @@ duplicates_unique = set()  # set of payloadHex that appeared 2+ times
 for dt in list1:
 
     if (dt[1][0:4]==msgid):
-        msg = J2735_202409.MessageFrame.MessageFrame
+        msg = j2735_202409.MessageFrame.MessageFrame
         try:
             msg.from_uper(unhexlify(dt[1]))
         except:
