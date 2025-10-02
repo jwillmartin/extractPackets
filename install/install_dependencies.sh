@@ -5,7 +5,7 @@ sudo apt-get update
 
 # Dependencies
 dependencies="python3 \
-    python3-pip
+    python3-pip \
     wireshark \
     tshark \
     git"
