@@ -126,7 +126,7 @@ def writeSpatHeader():
 
 def writeMessageHeader(msgType):
     if (msgType == "BSM") :
-        fout.write("packetTimestamp,bsm_id,secMark,latency,latitude,longitude,speed(m/s),heading,elevation(m),accel_long(m/s^2)\n")
+        fout.write("packetTimestamp,bsm_id,secMark,latency,latitude,longitude,speed(m/s),heading,elevation(m),accel_long(m/s^2),payload\n")
     elif (msgType=="MAP"):
         fout.write("packetTimestamp,intersectionID,latitude,longitude,payload\n")
     elif (msgType=="SDSM"):
@@ -300,7 +300,7 @@ for dt in list1:
             except Exception:
                 pass
             
-            fout.write(str(dt[0])+','+str(bsmId)+','+str(secMark)+','+str(latency)+','+str(lat/10000000.0)+','+str(long/10000000.0)+','+str(speed_converted)+','+str(heading)+','+str(accel_long_converted)+','+ str(elevation)+'\n')
+            fout.write(str(dt[0])+','+str(bsmId)+','+str(secMark)+','+str(latency)+','+str(lat/10000000.0)+','+str(long/10000000.0)+','+str(speed_converted)+','+str(heading)+','+str(accel_long_converted)+','+ str(elevation)+','+ str(dt[1])+'\n')
 
         # SDSM
         elif (msgid == "0029"):
