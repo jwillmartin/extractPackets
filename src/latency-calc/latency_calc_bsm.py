@@ -28,7 +28,6 @@ def get_timestamps(file_path) -> dict[float, str]:
                     timestamps[timestamp] = payload
                 except ValueError:
                     continue  # Skip lines where conversion fails
-    file.close()
     return timestamps
 
 def get_tx_ipg(
