@@ -120,13 +120,13 @@ def convID(id, length):
     return id
 
 def writeSpatHeader():
-    columnHeaderString="packetTimestamp,moy,dsecond,time_delta_ms,intersectionID\n"
+    columnHeaderString="packetTimestamp,moy,dsecond,time_delta_ms,intersectionID,payload\n"
     # columnHeaderString = columnHeaderString + ",phase" + ",state" + ",countdown\n"
     fout.write(columnHeaderString)
 
 def writeMessageHeader(msgType):
     if (msgType == "BSM") :
-        fout.write("packetTimestamp,bsm_id,secMark,latency,latitude,longitude,speed(m/s),heading,elevation(m),accel_long(m/s^2)\n")
+        fout.write("packetTimestamp,bsm_id,secMark,latency,latitude,longitude,speed(m/s),heading,elevation(m),accel_long(m/s^2),payload\n")
     elif (msgType=="MAP"):
         fout.write("packetTimestamp,intersectionID,latitude,longitude,payload\n")
     elif (msgType=="SDSM"):
@@ -247,7 +247,7 @@ for dt in list1:
             #     else:
             #         timeEndSec = minEndTime/6
 
-            spatString = str(dt[0] + "," + str(moy) + "," + str(dsecond) + "," + str(time_delta_ms) + "," + str(intersectionID) + "\n") # + "," + str(currentPhase) + "," + str(currentState) + "," + str(timeEndSec) + "\n")
+            spatString = str(dt[0] + "," + str(moy) + "," + str(dsecond) + "," + str(time_delta_ms) + "," + str(intersectionID) + "," + str(dt[1]) + "\n") # + "," + str(currentPhase) + "," + str(currentState) + "," + str(timeEndSec) + "\n")
             fout.write(spatString)
             # Track timestamp for message interval stats
             try:
@@ -300,7 +300,7 @@ for dt in list1:
             except Exception:
                 pass
             
-            fout.write(str(dt[0])+','+str(bsmId)+','+str(secMark)+','+str(latency)+','+str(lat/10000000.0)+','+str(long/10000000.0)+','+str(speed_converted)+','+str(heading)+','+str(accel_long_converted)+','+ str(elevation)+'\n')
+            fout.write(str(dt[0])+','+str(bsmId)+','+str(secMark)+','+str(latency)+','+str(lat/10000000.0)+','+str(long/10000000.0)+','+str(speed_converted)+','+str(heading)+','+str(elevation)+','+ str(accel_long_converted)+','+ str(dt[1])+'\n')
 
         # SDSM
         elif (msgid == "0029"):
